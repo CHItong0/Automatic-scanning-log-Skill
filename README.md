@@ -1,3 +1,5 @@
+[English](README-en.md) | [中文](README.md)
+
 # Claude Code 日志插件 (logs-plugin)
 
 一款用于管理和查询微服务日志的 Claude Code 插件。
