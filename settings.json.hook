@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "查下日志|查日志(?!并解决)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"请运行 /logs 命令查看日志\""
+          }
+        ]
+      },
+      {
+        "matcher": "查日志并解决bug",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"请运行 /logs-solve 命令查日志并解决bug\""
+          }
+        ]
+      }
+    ]
+  }
+}
