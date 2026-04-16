@@ -1,0 +1,11 @@
+{
+  "name": "automatic-scanning-log-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Codex log-scanning plugin with reusable scanner CLI and regression tests.",
+  "scripts": {
+    "lint": "node --check scanner.js && node --check scripts/logs-scanner-core.js && node --check scripts/logs-scanner-cli.js && node --check tests/scanner.test.js",
+    "test": "node --test tests/scanner.test.js",
+    "check": "npm run lint && npm test"
+  }
+}

@@ -1,75 +1,29 @@
 ---
 name: logs-solve
-description: Query logs for a service, analyze errors, and automatically fix them using systematic debugging. Chains /logs-auto with superpowers:systematic-debugging.
-license: MIT
-compatibility: Requires logs-plugin and superpowers:systematic-debugging skill.
-metadata:
-  author: claude
-  version: "1.0"
+description: 查询相关服务日志、提取错误线索，并把明确的故障上下文交给调试流程继续定位和修复。用户要求“查日志并修复”或“根据日志定位问题”时使用。
 ---
 
-# Logs Solve Skill
+# logs-solve
 
-Automatically query logs, analyze errors, and invoke systematic debugging to fix issues.
+查日志并进入修复流程。
 
-## Trigger
+## 执行规则
 
-When user asks to debug/fix a service problem and wants automatic log analysis + fixing.
+1. 先执行 `logs-auto`，拿到最新日志。
+2. 从日志里提取异常类型、报错语句、堆栈关键位置、受影响服务。
+3. 把整理后的故障上下文交给调试或修复流程，而不是把整段原始日志原样甩过去。
+4. 修复前先明确根因假设，修复后要回到日志或测试再次验证。
 
-## Workflow
+## 需要提取的上下文
 
-### Step 1: Analyze Context
+- 服务名或模块名
+- 触发错误的关键词
+- 关键异常类型
+- 可能的根因位置
+- 复现线索或时间线
 
-Read the current conversation to identify:
-- Service names mentioned
-- Error symptoms described
-- What the user wants to accomplish
+## 交接要求
 
-### Step 2: Invoke /logs-auto
-
-First, call the logs-auto skill to fetch logs:
-- Use Skill tool: `skill: "logs-auto"` with args containing the service name
-- Let logs-auto display the log content
-
-### Step 3: Analyze Log Errors
-
-After logs are displayed, analyze the content for:
-- Java exceptions (NullPointerException, RuntimeException, etc.)
-- Error messages (ERROR, Exception, Failed)
-- Stack traces
-- Root cause indicators
-
-### Step 4: Invoke systematic-debugging
-
-After analysis, invoke the systematic-debugging skill:
-- Use Skill tool: `skill: "superpowers:systematic-debugging"`
-- Pass the context including:
-  - Service name
-  - Error details from logs
-  - What the user wants to achieve
-
-The systematic-debugging skill will:
-- Investigate the root cause
-- Propose and implement fixes
-- Verify the solution
-
-## Examples
-
-**User says**: "Fix the ai-server errors"
-**Action**:
-1. Call logs-auto for ai-server
-2. Analyze errors in logs
-3. Call systematic-debugging with error context
-
-**User says**: "Debug why system-server is failing"
-**Action**:
-1. Call logs-auto for system-server
-2. Analyze logs for failure patterns
-3. Call systematic-debugging to investigate and fix
-
-## Notes
-
-- Always invoke logs-auto FIRST to get fresh log data
-- Provide detailed error context to systematic-debugging
-- The skill chains two capabilities: log analysis + automated debugging
-- If no clear errors found, still invoke systematic-debugging with the service context
+- 交给下游流程时，只保留足够支撑定位的日志摘要。
+- 如果日志里没有明确错误，也要说明“未发现明确异常，只发现哪些可疑信号”。
+- 不要跳过验证；修复完成后必须重新查日志或跑测试确认结果。

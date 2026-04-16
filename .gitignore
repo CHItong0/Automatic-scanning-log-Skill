@@ -1,2 +1,5 @@
-# Claude Code 插件目录
+# Plugin runtime artifacts
 .omc/
+.omx/
+config.json
+node_modules/

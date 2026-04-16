@@ -1,78 +1,28 @@
 ---
 name: logs-auto
-description: Automatically query and display logs for services mentioned in conversation. Analyzes context to find service names and fetches relevant logs using the logs-plugin scanner.
-license: MIT
-compatibility: Requires logs-plugin (scanner.js and config.json).
-metadata:
-  author: claude
-  version: "1.0"
+description: 根据上下文自动识别服务名和错误关键词，然后调用日志扫描器查询相关日志。用户没有精确输入命令、但明显是在让 Codex 自动查某个服务日志时使用。
 ---
 
-# Logs Auto Query Skill
+# logs-auto
 
-Automatically analyze conversation context, identify service names, and query their logs.
+根据上下文自动查日志。
 
-## Trigger
+## 执行规则
 
-When user asks to view logs or mentions a problem with a specific service.
+1. 从当前对话中提取服务名、模块名、错误关键词和时间范围。
+2. 先读取或生成 `config.json`，确保服务目录是最新的。
+3. 优先做精确匹配，其次用模块名做部分匹配。
+4. 调用 `node <plugin-root>/scanner.js query <service> [lines] [filter]`。
+5. 把识别依据和日志结果一起返回，避免“自动命中但无法解释”。
 
-## Workflow
+## 参数推断
 
-### Step 1: Analyze Context
+- 默认 `lines=100`，如果用户只说“看一下日志”则降到 `50`。
+- 如果用户在描述异常，优先提取 `error`、`exception`、`failed` 等关键字作为过滤词。
+- 如果用户要求“最近/刚刚/今天”的错误，优先增大行数，不要直接猜时间切片。
 
-Read the current conversation to identify:
-- Service names mentioned (e.g., "ai-server", "system-server", "gateway")
-- Error keywords or symptoms (e.g., "ERROR", "failed", "exception")
-- Time context (e.g., "recent", "today", specific timestamp)
+## 失败处理
 
-### Step 2: Load Service Configuration
-
-Execute scanner to get available services:
-```bash
-node .claude/logs-plugin/scanner.js list
-```
-
-Or use the config file directly at `.claude/logs-plugin/config.json`.
-
-### Step 3: Match Service
-
-Match identified service names to configured services:
-- Exact match on `name` field
-- Partial match on `module` field
-- Fuzzy match if exact match fails
-
-### Step 4: Query Logs
-
-Query logs using scanner.js:
-```bash
-node .claude/logs-plugin/scanner.js query <service-name> [lines] [filter]
-```
-
-Default: 100 lines, no filter. Adjust based on context:
-- If error reported: add ERROR filter
-- If specific time: increase line count
-- If debugging: show more context (200+ lines)
-
-### Step 5: Display Results
-
-Present logs in a clear format:
-- Show service name and time range
-- Display log content with syntax highlighting if possible
-- Highlight any errors or warnings found
-
-## Examples
-
-**User says**: "Check the ai-server logs"
-**Action**: Query ai-server with 100 lines, display results
-
-**User says**: "What errors did we have in system-server today?"
-**Action**: Query system-server with ERROR filter, show results
-
-**User says**: "Show me recent logs for gateway"
-**Action**: Query gateway-server with 50 lines, display results
-
-## Notes
-
-- If no service is identified, ask user which service to query
-- If service not found, show available services from config
-- Log path expansion: handles ~, ${user.home}, ${spring.application.name}
+- 没识别出服务时，回退到 `/logs` 风格的服务列表。
+- 匹配到多个候选时，按最接近的服务名排序并说明依据。
+- 日志路径展开支持 `~`、`${user.home}`、`${spring.application.name}`。

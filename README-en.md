@@ -1,61 +1,37 @@
 [English](README-en.md) | [中文](README.md)
 
-# Claude Code Logs Plugin (logs-plugin)
+# Automatic Log Scanner Plugin
 
-A Claude Code plugin for managing and querying microservice logs.
+This repository now follows a standard Codex plugin/skill layout for a generic log-scanning plugin. It recursively discovers service configs, persists log metadata, and exposes skills for listing services, querying logs, and chaining log-driven debugging workflows.
 
-## Architecture
+## Standard Layout
 
 ```
-                    ┌─────────────┐
-                    │    User    │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  User Input │
-                    │ /logs ai 50 │
-                    └──────┬──────┘
-                           │
-              ┌────────────┴────────────┐
-              │         Hooks          │ ← Listens to user messages, auto-triggers
-              │  settings.json.hook   │
-              └────────────┬────────────┘
-                           │
-           ┌───────────────┴───────────────┐
-           ▼                               ▼
-    ┌─────────────┐                ┌─────────────┐
-    │  Commands   │                │   Skills    │
-    │ /logs-init  │                │ /logs       │
-    │             │                │ /logs-auto  │
-    │  Initialize │                │ /logs-solve │
-    └──────┬──────┘                └──────┬──────┘
-           │                               │
-           │         ┌─────────────┐       │
-           └────────►│  Scanner    │◄──────┘
-                    │ scanner.js   │
-                    └──────┬──────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  Config    │
-                    │ config.json│
-                    └─────────────┘
+automatic-scanning-log-skill/
+├── .codex-plugin/plugin.json
+├── commands/
+├── skills/
+├── scripts/
+├── scanner.js
+├── tests/
+└── settings.json.hook
 ```
 
-### Module Description
+## Modules
 
 | Module | File | Function |
 |--------|------|----------|
-| **Hooks** | `settings.json.hook` | Monitors user messages, matches keywords to auto-trigger prompts |
-| **Commands** | `commands/` | `/logs-init` - Initialize and scan project services |
-| **Skills** | `skills/` | `/logs` query, `/logs-auto` auto query, `/logs-solve` query and fix |
-| **Scanner** | `scanner.js` | Scans project directory, identifies framework type, extracts service info |
-| **Config** | `config.json` | Stores framework type, service list, log paths, etc. |
+| **Manifest** | `.codex-plugin/plugin.json` | Declares plugin metadata, skills, and hook entrypoints |
+| **Commands** | `commands/` | Standard command spec for `/logs-init` |
+| **Skills** | `skills/` | Standard skill specs for `/logs`, `/logs-auto`, and `/logs-solve` |
+| **Core Scripts** | `scripts/` | Reusable scanning, config, log-query, and CLI logic |
+| **CLI Wrapper** | `scanner.js` | Backward-compatible CLI entrypoint |
+| **Config** | `config.json` | Generated service and log metadata |
+| **Tests** | `tests/` | Regression coverage for `init`, `list`, and `query` |
 
 ## Features
 
-- **Auto-scan services**: Automatically detects all microservices in the project
+- **Auto-scan services**: Recursively discovers service and log configuration files
 - **Multiple query methods**: Support specifying service, line count, keyword filtering
 - **Auto-fix**: Combines systematic-debugging to automatically analyze and fix issues
 - **Smart Hook**: Monitors user messages and automatically triggers log queries
@@ -63,20 +39,17 @@ A Claude Code plugin for managing and querying microservice logs.
 ## Supported Frameworks
 
 - Spring Boot
-- Spring Cloud
 - Node.js
 - Python
 - Go
-- .NET
-- ... (More frameworks extensible)
+- Falls back to `unknown` when nothing matches
 
 ## Quick Start
 
-### 1. Installation
+### 1. Install
 
 ```bash
-# Copy plugin files to project .claude directory
-cp -r logs-plugin/* .claude/
+# Place this directory where your Codex plugin loader can discover it
 ```
 
 ### 2. Initialize
@@ -89,9 +62,9 @@ First-time use requires scanning project services:
 
 This will:
 - Detect project framework
-- Scan all service modules
+- Recursively scan candidate service directories
 - Find log configuration files
-- Generate `.claude/logs-plugin/config.json`
+- Generate `config.json` in the plugin root
 
 ### 3. Query Logs
 
@@ -100,9 +73,9 @@ This will:
 /logs
 
 # View specific service logs
-/logs ai
-/logs ai 50
-/logs error
+/logs orders-api
+/logs orders-api 50
+/logs edge-proxy 200 error
 ```
 
 ## Command Reference
@@ -117,18 +90,18 @@ Initialize the plugin and scan project services.
 
 ### /logs
 
-Unified log query command.
+Unified log query entrypoint.
 
 ```
-/logs              # Show all service list
-/logs ai          # View ai service last 100 lines
-/logs ai 50       # View last 50 lines
-/logs ai 100 error # Filter logs containing error
+/logs                         # Show all services
+/logs orders-api              # View last 50 lines
+/logs orders-api 50           # View last 50 lines
+/logs orders-api 100 error    # Filter logs containing error
 ```
 
 ### /logs-auto
 
-Auto query logs. Automatically identifies service name and queries based on conversation context.
+Infer the service from context and query logs automatically.
 
 ```
 /logs-auto
@@ -136,7 +109,7 @@ Auto query logs. Automatically identifies service name and queries based on conv
 
 ### /logs-solve
 
-Query logs and auto-fix. After querying logs, analyzes errors and calls systematic-debugging to fix.
+Query logs, summarize failure signals, and hand off debugging context to a repair workflow.
 
 ```
 /logs-solve
@@ -177,19 +150,9 @@ Add content from `settings.json.hook` to `.claude/settings.json`:
 }
 ```
 
-### Trigger Conditions
+## Generated Config
 
-| User Input | Trigger Command |
-|------------|-----------------|
-| 查下日志 | /logs |
-| 查日志 | /logs |
-| 查日志并解决bug | /logs-solve |
-
-## Configuration
-
-### Config File
-
-After first run of `/logs-init`, `.claude/logs-plugin/config.json` will be generated:
+After `/logs-init`, the plugin writes:
 
 ```json
 {
@@ -197,8 +160,8 @@ After first run of `/logs-init`, `.claude/logs-plugin/config.json` will be gener
   "projectPath": "E:\\project\\path",
   "services": [
     {
-      "module": "aidouxue-module-ai-biz",
-      "name": "ai-server",
+      "module": "orders-api",
+      "name": "orders-api",
       "logPath": "${user.home}/logs/${spring.application.name}.log",
       "port": 48090
     }
@@ -206,39 +169,29 @@ After first run of `/logs-init`, `.claude/logs-plugin/config.json` will be gener
 }
 ```
 
-### Framework Detection
+The default scanner currently recognizes these common files and directory conventions:
 
-Plugin automatically detects project framework:
+- `application.yaml` / `application.yml`
+- `bootstrap.yaml` / `bootstrap.yml`
+- `logback-spring.xml` / `logback.xml`
+- `src/main/resources`
 
-| Framework | Detection File | Log Config |
-|-----------|----------------|------------|
-| Spring Boot | pom.xml | application.yaml, logback.xml |
-| Spring Cloud | pom.xml + bootstrap.yaml | application.yaml |
-| Node.js | package.json | Default path |
-| Python | requirements.txt | logging.conf |
-| Go | go.mod | Default path |
+## Developer Verification
 
-## File Structure
-
+```bash
+npm run check
 ```
-logs-plugin/
-├── README.md                    # Documentation
-├── README-en.md                 # English documentation
-├── scanner.js                   # Scanner script
-├── settings.json.hook          # Hooks configuration
-├── commands/
-│   └── logs-init.md            # /logs-init command
-└── skills/
-    ├── logs/                   # /logs unified log query
-    ├── logs-auto/              # /logs-auto auto query logs
-    └── logs-solve/             # /logs-solve query and fix
-```
+
+This runs:
+
+- `node --check` syntax validation
+- `node --test` regression tests
 
 ## FAQ
 
 ### Q: Log file doesn't exist?
 
-A: Make sure the service has been run at least once for log files to be generated. Check if `logPath` in configuration is correct.
+A: Make sure the service has produced logs at least once, and verify the resolved `logPath` from `config.json`.
 
 ### Q: How to view other service logs?
 
@@ -246,7 +199,7 @@ A: Run `/logs` first to see all available services, then use `/logs <service-nam
 
 ### Q: Can I customize log path?
 
-A: Yes, modify the log detection logic in `scanner.js`, or manually edit `config.json`.
+A: Yes. Update the extraction rules in `scripts/logs-scanner-core.js`, or edit `config.json` manually.
 
 ## License
 

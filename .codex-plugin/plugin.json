@@ -1,0 +1,36 @@
+{
+  "name": "automatic-scanning-log-skill",
+  "version": "1.0.0",
+  "description": "Scan project services, persist log metadata, and expose skills for listing and querying logs.",
+  "author": {
+    "name": "Automatic-scanning-log-Skill"
+  },
+  "license": "MIT",
+  "keywords": [
+    "logs",
+    "scanner",
+    "microservice",
+    "skill",
+    "plugin"
+  ],
+  "skills": "./skills/",
+  "hooks": "./settings.json.hook",
+  "interface": {
+    "displayName": "Automatic Log Scanner",
+    "shortDescription": "Scan services and query their logs from Codex skills.",
+    "longDescription": "Detect project services, build a reusable log config, and provide standard skills for listing services, querying logs, and chaining debugging workflows.",
+    "developerName": "Automatic-scanning-log-Skill",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Scan this project and build a log service catalog.",
+      "Show the latest logs for orders-api.",
+      "Find recent error lines for edge-proxy."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
